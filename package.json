@@ -1,7 +1,13 @@
 {
-  "name": "WebviewFileUploadAndroid",
-  "version": "0.0.1",
+  "name": "react-native-webview-android-file-upload",
+  "version": "0.1.0",
   "private": true,
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "AndroidWebView.js",
+    "android/"
+  ],
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start"
   },
