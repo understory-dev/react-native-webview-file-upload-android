@@ -8,32 +8,80 @@
  *
  * @providesModule AndroidWebView
  */
-'use strict';
+import React, {
+  Component,
+  PropTypes,
+} from 'react';
+import ReactNative, {
+  EdgeInsetsPropType,
+  ActivityIndicator,
+  StyleSheet,
+  UIManager,
+  View,
+  requireNativeComponent,
+} from 'react-native';
+import warning from 'warning';
+import keyMirror from 'keymirror';
+import resolveAssetSource from 'react-native/Libraries/Image/resolveAssetSource';
 
-var EdgeInsetsPropType = require('EdgeInsetsPropType');
-var ActivityIndicator = require('ActivityIndicator');
-var React = require('React');
-var ReactNative = require('ReactNative');
-var StyleSheet = require('StyleSheet');
-var UIManager = require('UIManager');
-var View = require('View');
+/**
+ * Adds a function for warning Users of deprecated prop use (when something was
+ * valid in previous versions of a component, but not any more).
+ *
+ * In a fit of hilarious irony, the built in React deprecatedPropType used for
+ *  warning users about deprecated PropTypes, has itself been deprecated, and
+ *  this fact is terribly documented (or at least the SEO is subpar), with most
+ *  of the "documentation" found through google being users being caught out by
+ *  this change.
+ *  https://facebook.github.io/react/warnings/dont-call-proptypes.html sort of
+ *  contains a replacement, but not fully documented (e.g. no declaration of
+ *  the 'warned' const). Finding the fix for this was a great experience
+ *  all round, would recommend.
+ */
+const warned = {};
+export default function deprecatedPropType(propType, explanation) {
+  return function validate(props, propName, componentName, ...rest) { // Note ...rest here
+    if (props[propName] != null) {
+      const message = `"${propName}" property of "${componentName}" has been deprecated.\n${explanation}`;
+      if (!warned[message]) {
+        warning(false, message);
+        warned[message] = true;
+      }
+    }
 
-var deprecatedPropType = require('deprecatedPropType');
-var keyMirror = require('fbjs/lib/keyMirror');
-var requireNativeComponent = require('requireNativeComponent');
-var resolveAssetSource = require('resolveAssetSource');
+    return propType(props, propName, componentName, ...rest); // and here
+  };
+}
 
-var PropTypes = React.PropTypes;
 
-var RCT_WEBVIEW_REF = 'AndroidWebView';
+const RCT_WEBVIEW_REF = 'AndroidWebView';
 
-var WebViewState = keyMirror({
-    IDLE: null,
-    LOADING: null,
-    ERROR: null,
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  hidden: {
+    height: 0,
+    flex: 0, // disable 'flex:1' when hiding a View
+  },
+  loadingView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingProgressBar: {
+    height: 20,
+  },
 });
 
-var defaultRenderLoading = () => (
+const WebViewState = keyMirror({
+  IDLE: null,
+  LOADING: null,
+  ERROR: null,
+});
+
+const defaultRenderLoading = () => (
   <View style={styles.loadingView}>
     <ActivityIndicator
       style={styles.loadingProgressBar}
@@ -44,323 +92,306 @@ var defaultRenderLoading = () => (
 /**
  * Renders a native AndroidWebView that allows file upload.
  */
-class AndroidWebView extends React.Component {
-    static propTypes = {
-        ...View.propTypes,
-        renderError: PropTypes.func,
-        renderLoading: PropTypes.func,
-        onLoad: PropTypes.func,
-        onLoadEnd: PropTypes.func,
-        onLoadStart: PropTypes.func,
-        onError: PropTypes.func,
-        automaticallyAdjustContentInsets: PropTypes.bool,
-        contentInset: EdgeInsetsPropType,
-        onNavigationStateChange: PropTypes.func,
-        onMessage: PropTypes.func,
-        onContentSizeChange: PropTypes.func,
-        startInLoadingState: PropTypes.bool, // force WebView to show loadingView on first load
-        style: View.propTypes.style,
+class AndroidWebView extends Component {
+  static propTypes = {
+    ...View.propTypes,
+    renderError: PropTypes.func,
+    renderLoading: PropTypes.func,
+    onLoad: PropTypes.func,
+    onLoadEnd: PropTypes.func,
+    onLoadStart: PropTypes.func,
+    onError: PropTypes.func,
+    automaticallyAdjustContentInsets: PropTypes.bool,
+    contentInset: EdgeInsetsPropType,
+    onNavigationStateChange: PropTypes.func,
+    onMessage: PropTypes.func,
+    onContentSizeChange: PropTypes.func,
+    startInLoadingState: PropTypes.bool, // force WebView to show loadingView on first load
+    style: View.propTypes.style,
 
-        html: deprecatedPropType(
-            PropTypes.string,
-            'Use the `source` prop instead.'
-        ),
+    html: deprecatedPropType(
+      PropTypes.string,
+      'Use the `source` prop instead.',
+    ),
 
-        url: deprecatedPropType(
-            PropTypes.string,
-            'Use the `source` prop instead.'
-        ),
+    url: deprecatedPropType(
+      PropTypes.string,
+      'Use the `source` prop instead.',
+    ),
 
-        /**
-         * Loads static html or a uri (with optional headers) in the WebView.
+    /**
+     * Loads static html or a uri (with optional headers) in the WebView.
+     */
+    source: PropTypes.oneOfType([
+      PropTypes.shape({
+        /*
+         * The URI to load in the WebView. Can be a local or remote file.
          */
-        source: PropTypes.oneOfType([
-            PropTypes.shape({
-                /*
-                 * The URI to load in the WebView. Can be a local or remote file.
-                 */
-                uri: PropTypes.string,
-                /*
-                 * The HTTP Method to use. Defaults to GET if not specified.
-                 * NOTE: On Android, only GET and POST are supported.
-                 */
-                method: PropTypes.oneOf(['GET', 'POST']),
-                /*
-                 * Additional HTTP headers to send with the request.
-                 * NOTE: On Android, this can only be used with GET requests.
-                 */
-                headers: PropTypes.object,
-                /*
-                 * The HTTP body to send with the request. This must be a valid
-                 * UTF-8 string, and will be sent exactly as specified, with no
-                 * additional encoding (e.g. URL-escaping or base64) applied.
-                 * NOTE: On Android, this can only be used with POST requests.
-                 */
-                body: PropTypes.string,
-            }),
-            PropTypes.shape({
-                /*
-                 * A static HTML page to display in the WebView.
-                 */
-                html: PropTypes.string,
-                /*
-                 * The base URL to be used for any relative links in the HTML.
-                 */
-                baseUrl: PropTypes.string,
-            }),
-            /*
-             * Used internally by packager.
-             */
-            PropTypes.number,
-        ]),
-
-        /**
-         * Used on Android only, JS is enabled by default for WebView on iOS
-         * @platform android
+        uri: PropTypes.string,
+        /*
+         * The HTTP Method to use. Defaults to GET if not specified.
+         * NOTE: On Android, only GET and POST are supported.
          */
-        javaScriptEnabled: PropTypes.bool,
-
-        /**
-         * Used on Android only, controls whether DOM Storage is enabled or not
-         * @platform android
+        method: PropTypes.oneOf(['GET', 'POST']),
+        /*
+         * Additional HTTP headers to send with the request.
+         * NOTE: On Android, this can only be used with GET requests.
          */
-        domStorageEnabled: PropTypes.bool,
-
-        /**
-         * Sets the JS to be injected when the webpage loads.
+        headers: PropTypes.object,
+        /*
+         * The HTTP body to send with the request. This must be a valid
+         * UTF-8 string, and will be sent exactly as specified, with no
+         * additional encoding (e.g. URL-escaping or base64) applied.
+         * NOTE: On Android, this can only be used with POST requests.
          */
-        injectedJavaScript: PropTypes.string,
-
-        /**
-         * Sets whether the webpage scales to fit the view and the user can change the scale.
+        body: PropTypes.string,
+      }),
+      PropTypes.shape({
+        /*
+         * A static HTML page to display in the WebView.
          */
-        scalesPageToFit: PropTypes.bool,
-
-        /**
-         * Sets the user-agent for this WebView. The user-agent can also be set in native using
-         * WebViewConfig. This prop will overwrite that config.
+        html: PropTypes.string,
+        /*
+         * The base URL to be used for any relative links in the HTML.
          */
-        userAgent: PropTypes.string,
+        baseUrl: PropTypes.string,
+      }),
+      /*
+       * Used internally by packager.
+       */
+      PropTypes.number,
+    ]),
 
-        /**
-         * Used to locate this view in end-to-end tests.
-         */
-        testID: PropTypes.string,
+    /**
+     * Used on Android only, JS is enabled by default for WebView on iOS
+     * @platform android
+     */
+    javaScriptEnabled: PropTypes.bool,
 
-        /**
-         * Determines whether HTML5 audio & videos require the user to tap before they can
-         * start playing. The default value is `false`.
-         */
-        mediaPlaybackRequiresUserAction: PropTypes.bool,
-        /**
-         * Make upload file available
-         */
-        uploadEnabledAndroid: PropTypes.bool,
+    /**
+     * Used on Android only, controls whether DOM Storage is enabled or not
+     * @platform android
+     */
+    domStorageEnabled: PropTypes.bool,
 
-        /**
-         * Boolean that sets whether JavaScript running in the context of a file
-         * scheme URL should be allowed to access content from any origin.
-         * Including accessing content from other file scheme URLs
-         * @platform android
-         */
-        allowUniversalAccessFromFileURLs: PropTypes.bool,
-    };
+    /**
+     * Sets the JS to be injected when the webpage loads.
+     */
+    injectedJavaScript: PropTypes.string,
 
-    static defaultProps = {
-        javaScriptEnabled : true,
-        scalesPageToFit: true,
-    };
+    /**
+     * Sets whether the webpage scales to fit the view and the user can change the scale.
+     */
+    scalesPageToFit: PropTypes.bool,
 
-    state = {
-        viewState: WebViewState.IDLE,
-        lastErrorEvent: null,
-        startInLoadingState: true,
-    };
+    /**
+     * Sets the user-agent for this WebView. The user-agent can also be set in native using
+     * WebViewConfig. This prop will overwrite that config.
+     */
+    userAgent: PropTypes.string,
 
-    componentWillMount() {
-        if (this.props.startInLoadingState) {
-            this.setState({viewState: WebViewState.LOADING});
-        }
+    /**
+     * Used to locate this view in end-to-end tests.
+     */
+    testID: PropTypes.string,
+
+    /**
+     * Determines whether HTML5 audio & videos require the user to tap before they can
+     * start playing. The default value is `false`.
+     */
+    mediaPlaybackRequiresUserAction: PropTypes.bool,
+    /**
+     * Make upload file available
+     */
+    uploadEnabledAndroid: PropTypes.bool,
+
+    /**
+     * Boolean that sets whether JavaScript running in the context of a file
+     * scheme URL should be allowed to access content from any origin.
+     * Including accessing content from other file scheme URLs
+     * @platform android
+     */
+    allowUniversalAccessFromFileURLs: PropTypes.bool,
+  };
+
+  static defaultProps = {
+    javaScriptEnabled: true,
+    scalesPageToFit: true,
+  };
+
+  state = {
+    viewState: WebViewState.IDLE,
+    lastErrorEvent: null,
+    startInLoadingState: true,
+  };
+
+  componentWillMount() {
+    if (this.props.startInLoadingState) {
+      this.setState({ viewState: WebViewState.LOADING });
     }
-
-  render() {
-    var otherView = null;
-
-    if (this.state.viewState === WebViewState.LOADING) {
-        otherView = (this.props.renderLoading || defaultRenderLoading)();
-    } else if (this.state.viewState === WebViewState.ERROR) {
-        var errorEvent = this.state.lastErrorEvent;
-        otherView = this.props.renderError && this.props.renderError(
-                errorEvent.domain,
-                errorEvent.code,
-                errorEvent.description);
-    } else if (this.state.viewState !== WebViewState.IDLE) {
-        console.error('RCTWebView invalid state encountered: ' + this.state.loading);
-    }
-
-    var webViewStyles = [styles.container, this.props.style];
-    if (this.state.viewState === WebViewState.LOADING ||
-        this.state.viewState === WebViewState.ERROR) {
-        // if we're in either LOADING or ERROR states, don't show the webView
-        webViewStyles.push(styles.hidden);
-    }
-
-    var source = this.props.source || {};
-    if (this.props.html) {
-        source.html = this.props.html;
-    } else if (this.props.url) {
-        source.uri = this.props.url;
-    }
-
-    if (source.method === 'POST' && source.headers) {
-        console.warn('WebView: `source.headers` is not supported when using POST.');
-    } else if (source.method === 'GET' && source.body) {
-        console.warn('WebView: `source.body` is not supported when using GET.');
-    }
-
-    var webView =
-        <WebViewForAndroid
-            ref={RCT_WEBVIEW_REF}
-            key="androidwebViewKey"
-            style={webViewStyles}
-            source={resolveAssetSource(source)}
-            scalesPageToFit={this.props.scalesPageToFit}
-            injectedJavaScript={this.props.injectedJavaScript}
-            userAgent={this.props.userAgent}
-            javaScriptEnabled={this.props.javaScriptEnabled}
-            domStorageEnabled={this.props.domStorageEnabled}
-            messagingEnabled={typeof this.props.onMessage === 'function'}
-            onMessage={this.onMessage}
-            contentInset={this.props.contentInset}
-            automaticallyAdjustContentInsets={this.props.automaticallyAdjustContentInsets}
-            onContentSizeChange={this.props.onContentSizeChange}
-            onLoadingStart={this.onLoadingStart}
-            onLoadingFinish={this.onLoadingFinish}
-            onLoadingError={this.onLoadingError}
-            testID={this.props.testID}
-            mediaPlaybackRequiresUserAction={this.props.mediaPlaybackRequiresUserAction}
-            uploadEnabledAndroid={true}
-      />;
-
-    return (
-        <View style={styles.container}>
-            {webView}
-            {otherView}
-        </View>
-    );
   }
 
+  onLoadingStart = (event) => {
+    const onLoadStart = this.props.onLoadStart;
+    onLoadStart && onLoadStart(event);
+    this.updateNavigationState(event);
+  };
+
+  onLoadingError = (event) => {
+    event.persist(); // persist this event because we need to store it
+    const { onError, onLoadEnd } = this.props;
+    onError && onError(event);
+    onLoadEnd && onLoadEnd(event);
+    console.warn('Encountered an error loading page', event.nativeEvent);
+
+    this.setState({
+      lastErrorEvent: event.nativeEvent,
+      viewState: WebViewState.ERROR,
+    });
+  };
+
+  onLoadingFinish = (event) => {
+    const { onLoad, onLoadEnd } = this.props;
+    onLoad && onLoad(event);
+    onLoadEnd && onLoadEnd(event);
+    this.setState({
+      viewState: WebViewState.IDLE,
+    });
+    this.updateNavigationState(event);
+  };
+
+  onMessage = (event: Event) => {
+    const { onMessage } = this.props;
+    onMessage && onMessage(event);
+  }
+
+  getWebViewHandle = () => ReactNative.findNodeHandle(this[RCT_WEBVIEW_REF]);
+
+
   goForward = () => {
-        UIManager.dispatchViewManagerCommand(
-            this.getWebViewHandle(),
-            UIManager.RCTWebView.Commands.goForward,
-            null
-        );
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewHandle(),
+      UIManager.RCTWebView.Commands.goForward,
+      null,
+    );
   };
 
   goBack = () => {
-        UIManager.dispatchViewManagerCommand(
-            this.getWebViewHandle(),
-            UIManager.RCTWebView.Commands.goBack,
-            null
-        );
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewHandle(),
+      UIManager.RCTWebView.Commands.goBack,
+      null,
+    );
+  };
+
+  postMessage = (data) => {
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewHandle(),
+      UIManager.RCTWebView.Commands.postMessage,
+      [String(data)],
+    );
   };
 
   reload = () => {
-        UIManager.dispatchViewManagerCommand(
-            this.getWebViewHandle(),
-            UIManager.RCTWebView.Commands.reload,
-            null
-        );
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewHandle(),
+      UIManager.RCTWebView.Commands.reload,
+      null,
+    );
   };
 
   stopLoading = () => {
     UIManager.dispatchViewManagerCommand(
       this.getWebViewHandle(),
       UIManager.RCTWebView.Commands.stopLoading,
-      null
+      null,
     );
   };
 
-  postMessage = (data) => {
-        UIManager.dispatchViewManagerCommand(
-            this.getWebViewHandle(),
-            UIManager.RCTWebView.Commands.postMessage,
-            [String(data)]
-        );
+  /**
+  * We return an event with a bunch of fields including:
+  *  url, title, loading, canGoBack, canGoForward
+  */
+  updateNavigationState = (event) => {
+    if (this.props.onNavigationStateChange) {
+      this.props.onNavigationStateChange(event.nativeEvent);
+    }
   };
 
-    /**
-    * We return an event with a bunch of fields including:
-    *  url, title, loading, canGoBack, canGoForward
-    */
-    updateNavigationState = (event) => {
-        if (this.props.onNavigationStateChange) {
-            this.props.onNavigationStateChange(event.nativeEvent);
-        }
-    };
+  render() {
+    let otherView = null;
 
-    getWebViewHandle = () => {
-        return ReactNative.findNodeHandle(this.refs[RCT_WEBVIEW_REF]);
-    };
-
-    onLoadingStart = (event) => {
-        var onLoadStart = this.props.onLoadStart;
-        onLoadStart && onLoadStart(event);
-        this.updateNavigationState(event);
-    };
-
-    onLoadingError = (event) => {
-        event.persist(); // persist this event because we need to store it
-        var {onError, onLoadEnd} = this.props;
-        onError && onError(event);
-        onLoadEnd && onLoadEnd(event);
-        console.warn('Encountered an error loading page', event.nativeEvent);
-
-        this.setState({
-            lastErrorEvent: event.nativeEvent,
-            viewState: WebViewState.ERROR
-        });
-    };
-
-    onLoadingFinish = (event) => {
-        var {onLoad, onLoadEnd} = this.props;
-        onLoad && onLoad(event);
-        onLoadEnd && onLoadEnd(event);
-        this.setState({
-            viewState: WebViewState.IDLE,
-        });
-        this.updateNavigationState(event);
-    };
-
-    onMessage = (event: Event) => {
-        var {onMessage} = this.props;
-        onMessage && onMessage(event);
+    if (this.state.viewState === WebViewState.LOADING) {
+      otherView = (this.props.renderLoading || defaultRenderLoading)();
+    } else if (this.state.viewState === WebViewState.ERROR) {
+      const errorEvent = this.state.lastErrorEvent;
+      otherView = this.props.renderError && this.props.renderError(
+              errorEvent.domain,
+              errorEvent.code,
+              errorEvent.description);
+    } else if (this.state.viewState !== WebViewState.IDLE) {
+      console.error(`RCTWebView invalid state encountered: ${this.state.loading}`);
     }
+
+    const webViewStyles = [styles.container, this.props.style];
+    if (this.state.viewState === WebViewState.LOADING ||
+      this.state.viewState === WebViewState.ERROR) {
+      // if we're in either LOADING or ERROR states, don't show the webView
+      webViewStyles.push(styles.hidden);
+    }
+
+    const source = this.props.source || {};
+    if (this.props.html) {
+      source.html = this.props.html;
+    } else if (this.props.url) {
+      source.uri = this.props.url;
+    }
+
+    if (source.method === 'POST' && source.headers) {
+      console.warn('WebView: `source.headers` is not supported when using POST.');
+    } else if (source.method === 'GET' && source.body) {
+      console.warn('WebView: `source.body` is not supported when using GET.');
+    }
+
+    const webView = (
+      <WebViewForAndroid
+        ref={(c) => { this[RCT_WEBVIEW_REF] = c; }}
+        key="androidwebViewKey"
+        style={webViewStyles}
+        source={resolveAssetSource(source)}
+        scalesPageToFit={this.props.scalesPageToFit}
+        injectedJavaScript={this.props.injectedJavaScript}
+        userAgent={this.props.userAgent}
+        javaScriptEnabled={this.props.javaScriptEnabled}
+        domStorageEnabled={this.props.domStorageEnabled}
+        messagingEnabled={typeof this.props.onMessage === 'function'}
+        onMessage={this.onMessage}
+        contentInset={this.props.contentInset}
+        automaticallyAdjustContentInsets={this.props.automaticallyAdjustContentInsets}
+        onContentSizeChange={this.props.onContentSizeChange}
+        onLoadingStart={this.onLoadingStart}
+        onLoadingFinish={this.onLoadingFinish}
+        onLoadingError={this.onLoadingError}
+        testID={this.props.testID}
+        mediaPlaybackRequiresUserAction={this.props.mediaPlaybackRequiresUserAction}
+        uploadEnabledAndroid={true}
+      />
+    );
+
+    return (
+      <View style={styles.container}>
+        {webView}
+        {otherView}
+      </View>
+    );
+  }
 }
 
-var WebViewForAndroid = requireNativeComponent('AndroidWebView', AndroidWebView, {
-    nativeOnly: {
-        messagingEnabled: PropTypes.bool,
-    },
+const WebViewForAndroid = requireNativeComponent('AndroidWebView', AndroidWebView, {
+  nativeOnly: {
+    messagingEnabled: PropTypes.bool,
+  },
 });
 
-var styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    hidden: {
-        height: 0,
-        flex: 0, // disable 'flex:1' when hiding a View
-    },
-    loadingView: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingProgressBar: {
-        height: 20,
-    },
-});
 
 module.exports = AndroidWebView;
