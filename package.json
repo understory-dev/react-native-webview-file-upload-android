@@ -11,10 +11,12 @@
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start"
   },
+  "peerDependencies": {
+    "react": "^15.3.2",
+    "react-native": "^0.40.0"
+  },
   "dependencies": {
     "keymirror": "^0.1.1",
-    "react": "^15.3.2",
-    "react-native": "^0.40.0",
     "warning": "^3.0.0"
   },
   "devDependencies": {
