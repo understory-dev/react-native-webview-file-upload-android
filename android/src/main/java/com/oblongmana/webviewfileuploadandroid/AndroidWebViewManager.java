@@ -16,11 +16,7 @@ import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.views.webview.ReactWebViewManager;
 import com.oblongmana.webviewfileuploadandroid.AndroidWebViewModule;
 
-/**
- * Created by ydq on 16/4/12.
- */
 public class AndroidWebViewManager extends ReactWebViewManager {
-
 
     private Activity mActivity = null;
     private AndroidWebViewPackage aPackage;
@@ -92,5 +88,3 @@ public class AndroidWebViewManager extends ReactWebViewManager {
         return this.aPackage;
     }
 }
-
-

@@ -41,4 +41,3 @@ public class AndroidWebViewPackage implements ReactPackage {
         return module;
     }
 }
-
