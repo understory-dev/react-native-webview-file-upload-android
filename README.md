@@ -172,6 +172,6 @@ comply with this. My personal dev environment was Sublime Text 3, using
 While developing locally, I would suggest you have a test react-native project
 which has a local copy of this library as a dependency. You can accomplish this
 by adding
-`"react-native-webview-file-upload": "file:../react-native-webview-file-upload"`
+`"react-native-webview-file-upload-android": "file:../react-native-webview-file-upload-android"`
 to your `package.json` `dependencies` (obviously, alter the `file:` url to
 point to your local copy).
