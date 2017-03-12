@@ -12,7 +12,9 @@ adds in an `<AndroidWebView>` that does support file input.",
   "files": [
     "index.js",
     "AndroidWebView.js",
-    "android/"
+    "android/",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start"
