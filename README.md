@@ -52,9 +52,9 @@ Image Upload from Gallery in iOS however, this is as simple as ensuring your
 The following threads provide some further technical background as to the need
 for this library, and implementation. These may be of use if modifying this
 library.
-https://github.com/facebook/react-native/pull/12807
-https://github.com/facebook/react-native/issues/11230
-https://github.com/facebook/react-native/issues/5219
+- https://github.com/facebook/react-native/pull/12807
+- https://github.com/facebook/react-native/issues/11230
+- https://github.com/facebook/react-native/issues/5219
 
 ## Requirements
 This has been tested with (and has a peerDependency in package.json on
@@ -134,7 +134,7 @@ types of media capture, but only image capture is presently supported using
 this library. See the Usage notes above, and the Limitations section.
 ```jsx
 import React, { Component} from 'react';
-import { WebView, View } from 'react-native';
+import { WebView, View, Platform } from 'react-native';
 import AndroidWebView from 'react-native-webview-file-upload-android';
 //...
 class MySuperSpecialWebView extends Component {
