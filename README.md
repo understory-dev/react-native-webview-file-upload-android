@@ -2,6 +2,8 @@
 ReactNative's WebView on Android does not support file input. This library
 adds in an `<AndroidWebView>` that does support file input.
 
+*PLEASE READ THE LIMITATIONS SECTION FIRST*
+
 The lack of support appears to be due to Android-level limitations -
 specifically that there is no API available for this prior to Android 5 (except
 kind of between 4 and 4.4.1 possibly, hard to read from discussions? And using
@@ -16,6 +18,7 @@ undocumented APIs prior? Very spotty APIs anyway, and not built-in to WebView)
   - [Manual Linking](#manual-linking)
   - [Automatic Linking](#automatic-linking)
 - [Usage](#usage)
+- [Contributing](#contributing)
 
 <!-- /MarkdownTOC -->
 
@@ -154,3 +157,21 @@ class MySuperSpecialWebView extends Component {
   }
 }
 ```
+
+## Contributing
+As noted enthusiastically above, contributions are very welcome, especially any
+contributions which add support for files other than images selected from the
+gallery
+
+This project includes an `.eslintrc.json` file, and any contributions should
+comply with this. My personal dev environment was Sublime Text 3, using
+- https://github.com/SublimeLinter/SublimeLinter3
+- https://github.com/roadhump/SublimeLinter-eslint
+- https://github.com/babel/babel-sublime
+
+While developing locally, I would suggest you have a test react-native project
+which has a local copy of this library as a dependency. You can accomplish this
+by adding
+`"react-native-webview-file-upload": "file:../react-native-webview-file-upload"`
+to your `package.json` `dependencies` (obviously, alter the `file:` url to
+point to your local copy).
