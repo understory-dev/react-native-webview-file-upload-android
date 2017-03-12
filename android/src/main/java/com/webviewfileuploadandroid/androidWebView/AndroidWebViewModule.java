@@ -1,4 +1,8 @@
-package com.webviewfileuploadandroid;
+package com.webviewfileuploadandroid.androidWebView;
+
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ActivityEventListener;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -8,45 +12,56 @@ import android.net.Uri;
 import android.os.Build;
 import android.webkit.ValueCallback;
 
-import com.facebook.react.ReactActivity;
-import com.facebook.react.ReactInstanceManager;
-import com.facebook.react.ReactPackage;
-import com.facebook.react.shell.MainReactPackage;
-import com.webviewfileuploadandroid.androidWebView.AndroidWebViewPackage;
+import com.facebook.react.common.annotations.VisibleForTesting;
 
-import java.util.Arrays;
-import java.util.List;
-
-public class MainActivity extends ReactActivity {
-
+public class AndroidWebViewModule extends ReactContextBaseJavaModule implements ActivityEventListener {
     private ValueCallback<Uri> mUploadMessage;
     private ValueCallback<Uri[]> mUploadCallbackAboveL;
 
-    /**
-     * Returns the name of the main component registered from JavaScript.
-     * This is used to schedule rendering of the component.
-     */
+    @VisibleForTesting
+    public static final String REACT_CLASS = "AndroidWebViewModule";
+
+    public AndroidWebViewModule(ReactApplicationContext context){
+        super(context);
+        context.addActivityEventListener(this);
+    }
+
+    private AndroidWebViewPackage aPackage;
+
+    public void setPackage(AndroidWebViewPackage aPackage) {
+        this.aPackage = aPackage;
+    }
+
+    public AndroidWebViewPackage getPackage() {
+        return this.aPackage;
+    }
+
     @Override
-    protected String getMainComponentName() {
-        return "WebviewFileUploadAndroid";
+    public String getName(){
+        return REACT_CLASS;
+    }
+
+    @SuppressWarnings("unused")
+    public Activity getActivity() {
+        return getCurrentActivity();
     }
 
     public void setUploadMessage(ValueCallback<Uri> uploadMessage) {
         mUploadMessage = uploadMessage;
     }
 
-
     public void setmUploadCallbackAboveL(ValueCallback<Uri[]> mUploadCallbackAboveL) {
         this.mUploadCallbackAboveL = mUploadCallbackAboveL;
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode,
-                                 Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+        // super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1) {
-            if (null == mUploadMessage && null == mUploadCallbackAboveL) return;
-            Uri result = data == null || resultCode != RESULT_OK ? null : data.getData();
+            if (null == mUploadMessage && null == mUploadCallbackAboveL){
+                return;
+            }
+            Uri result = data == null || resultCode != Activity.RESULT_OK ? null : data.getData();
             if (mUploadCallbackAboveL != null) {
                 onActivityResultAboveL(requestCode, resultCode, data);
             } else if (mUploadMessage != null) {
@@ -54,20 +69,15 @@ public class MainActivity extends ReactActivity {
                 mUploadMessage = null;
             }
         }
-
-
     }
-
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void onActivityResultAboveL(int requestCode, int resultCode, Intent data) {
-        if (requestCode != 1
-                || mUploadCallbackAboveL == null) {
+        if (requestCode != 1 || mUploadCallbackAboveL == null) {
             return;
         }
         Uri[] results = null;
         if (resultCode == Activity.RESULT_OK) {
-            if (data == null) {
-            } else {
+            if (data != null) {
                 String dataString = data.getDataString();
                 ClipData clipData = data.getClipData();
                 if (clipData != null) {
@@ -83,6 +93,6 @@ public class MainActivity extends ReactActivity {
         }
         mUploadCallbackAboveL.onReceiveValue(results);
         mUploadCallbackAboveL = null;
-        return;
     }
+    public void onNewIntent(Intent intent) {}
 }
