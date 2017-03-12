@@ -1,4 +1,4 @@
-package com.webviewfileuploadandroid.androidWebView;
+package com.oblongmana.webviewfileuploadandroid;
 
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.JavaScriptModule;

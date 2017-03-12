@@ -1,4 +1,4 @@
-package com.webviewfileuploadandroid.androidWebView;
+package com.oblongmana.webviewfileuploadandroid;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -14,7 +14,7 @@ import android.webkit.WebView;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.views.webview.ReactWebViewManager;
-import com.webviewfileuploadandroid.androidWebView.AndroidWebViewModule;
+import com.oblongmana.webviewfileuploadandroid.AndroidWebViewModule;
 
 /**
  * Created by ydq on 16/4/12.
