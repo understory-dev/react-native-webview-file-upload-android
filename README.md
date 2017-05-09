@@ -32,10 +32,10 @@ difficult, if not impossible, to maintain compatibility with all versions of
 React Native.
 
 At present, if you want support for anything beyond 0.44.0, alter your
-package.json for this to point at the commit #2232c7c0b88cd6ecfecc5df566287b0976dda6e1.
+package.json for this to point at the commit #4f8c1a775750788dc2464dea8dd189b7a41ea17b.
 So for example:
 ```
-"react-native-webview-file-upload-android": "github:oblongmana/react-native-webview-file-upload-android#2232c7c0b88cd6ecfecc5df566287b0976dda6e1"
+"react-native-webview-file-upload-android": "github:oblongmana/react-native-webview-file-upload-android#4f8c1a775750788dc2464dea8dd189b7a41ea17b"
 ```
 
 In future, may update the npm published version to include these changes, so
