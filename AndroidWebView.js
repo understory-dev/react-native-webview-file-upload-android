@@ -295,7 +295,7 @@ class AndroidWebView extends Component {
     onMessage && onMessage(event);
   }
 
-  getWebViewHandle = () => ReactNative.findNodeHandle(this.refs[RCT_WEBVIEW_REF]);
+  getWebViewHandle = () => ReactNative.findNodeHandle(this[RCT_WEBVIEW_REF]);
 
 
   goForward = () => {
