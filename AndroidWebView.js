@@ -212,6 +212,12 @@ class AndroidWebView extends Component {
      * @platform android
      */
     allowUniversalAccessFromFileURLs: PropTypes.bool,
+
+    mixedContentMode: PropTypes.string,
+
+    saveFormDataDisabled: PropTypes.bool,
+    
+    thirdPartyCookiesEnabled: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -375,6 +381,7 @@ class AndroidWebView extends Component {
         testID={this.props.testID}
         mediaPlaybackRequiresUserAction={this.props.mediaPlaybackRequiresUserAction}
         uploadEnabledAndroid={true}
+        mixedContentMode={this.props.mixedContentMode}
       />
     );
 
