@@ -9,7 +9,7 @@ import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
-
+import android.provider.MediaStore;
 
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.ThemedReactContext;
@@ -30,6 +30,8 @@ public class AndroidWebViewManager extends ReactWebViewManager {
         //Now do our own setWebChromeClient, patching in file chooser support
         final AndroidWebViewModule module = this.aPackage.getModule();
         view.setWebChromeClient(new WebChromeClient(){
+            private static final String JPEG_FILE_PREFIX = "IMG_";
+            private static final String JPEG_FILE_SUFFIX = ".jpg";
 
             public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
                 module.setUploadMessage(uploadMsg);
@@ -66,11 +68,21 @@ public class AndroidWebViewManager extends ReactWebViewManager {
                 return true;
             }
 
+            // Let the user select content
             private void openFileChooserView(){
                 try {
                     final Intent galleryIntent = new Intent(Intent.ACTION_PICK);
-                    galleryIntent.setType("image/*");
-                    final Intent chooserIntent = Intent.createChooser(galleryIntent, "Choose File");
+                    galleryIntent.setType("image/*,video/*");
+
+                    final Intent imageIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    final Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+
+                    final Intent chooserIntent = Intent.createChooser(galleryIntent, "");
+                    chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] {
+                        imageIntent,
+                        videoIntent
+                    });
+
                     module.getActivity().startActivityForResult(chooserIntent, 1);
                 } catch (Exception e) {
                     Log.d("customwebview", e.toString());
