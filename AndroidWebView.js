@@ -8,10 +8,8 @@
  *
  * @providesModule AndroidWebView
  */
-import React, {
-  Component,
-  PropTypes,
-} from 'react';
+import React, { Component } from 'react';
+import PropTypes from 'prop-types'
 import ReactNative, {
   EdgeInsetsPropType,
   ActivityIndicator,
@@ -107,7 +105,6 @@ class AndroidWebView extends Component {
     onMessage: PropTypes.func,
     onContentSizeChange: PropTypes.func,
     startInLoadingState: PropTypes.bool, // force WebView to show loadingView on first load
-    style: View.propTypes.style,
 
     html: deprecatedPropType(
       PropTypes.string,
